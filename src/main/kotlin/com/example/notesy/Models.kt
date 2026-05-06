@@ -16,3 +16,10 @@ data class GroceryItem(
     val name: String,
     val isChecked: Boolean = false
 )
+
+@Serializable
+data class PreferredItem(
+    val id: String,
+    val itemName: String,
+    val addedAt: Long
+)

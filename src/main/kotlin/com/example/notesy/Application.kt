@@ -74,5 +74,34 @@ fun Application.configureRouting() {
                 call.respond(HttpStatusCode.NotFound, "Note not found")
             }
         }
+
+        // ===== Preferred Items Endpoints =====
+
+        // Get all preferred items
+        get("/preferred-items") {
+            call.respond(PreferredItemsRepository.getAllItems())
+        }
+
+        // Add a preferred item
+        post("/preferred-items") {
+            val item = call.receive<PreferredItem>()
+            val success = PreferredItemsRepository.addItem(item)
+            if (success) {
+                call.respond(HttpStatusCode.Created, item)
+            } else {
+                call.respond(HttpStatusCode.BadRequest, "Maximum 10 preferred items allowed")
+            }
+        }
+
+        // Delete a preferred item
+        delete("/preferred-items/{id}") {
+            val id = call.parameters["id"] ?: ""
+            val success = PreferredItemsRepository.removeItem(id)
+            if (success) {
+                call.respond(HttpStatusCode.OK, "Preferred item deleted")
+            } else {
+                call.respond(HttpStatusCode.NotFound, "Preferred item not found")
+            }
+        }
     }
 }
