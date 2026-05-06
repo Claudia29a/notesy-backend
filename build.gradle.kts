@@ -24,8 +24,20 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 application {
     mainClass.set("com.example.notesy.ApplicationKt")
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "com.example.notesy.ApplicationKt"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
 }
 
 tasks.test {
