@@ -6,15 +6,14 @@ import kotlinx.serialization.Serializable
 data class GroceryNote(
     val id: String,
     val title: String,
-    val items: List<GroceryItem>,
-    val createdAt: Long,
-    val updatedAt: Long
+    val items: List<String>,  // ✅ Changed from List<GroceryItem>
+    val createdAt: String      // ✅ Changed from Long to String
 )
 
 @Serializable
-data class GroceryItem(
-    val name: String,
-    val isChecked: Boolean = false
+data class CreateNoteRequest(
+    val title: String,
+    val items: List<String>
 )
 
 @Serializable
