@@ -7,6 +7,9 @@ object NotesRepository {
 
     fun getNoteById(id: String): GroceryNote? = notes.find { it.id == id }
 
+    fun getNotesByFolder(folderId: String): List<GroceryNote> =
+        notes.filter { it.folderId == folderId }
+
     fun addNote(note: GroceryNote) {
         notes.add(note)
     }

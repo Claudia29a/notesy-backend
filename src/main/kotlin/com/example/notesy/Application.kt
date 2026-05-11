@@ -29,12 +29,67 @@ fun Application.configureRouting() {
             call.respondText("Notesy Backend is running!", ContentType.Text.Plain)
         }
 
-        // Get all notes
+        // ===== Folder Endpoints =====
+
+        get("/folders") {
+            call.respond(FoldersRepository.getAllFolders())
+        }
+
+        get("/folders/{id}") {
+            val id = call.parameters["id"]
+            val folder = FoldersRepository.getFolderById(id ?: "")
+            if (folder != null) {
+                call.respond(folder)
+            } else {
+                call.respond(HttpStatusCode.NotFound, "Folder not found")
+            }
+        }
+
+        post("/folders") {
+            val request = call.receive<CreateFolderRequest>()
+            val folder = Folder(
+                id = java.util.UUID.randomUUID().toString(),
+                name = request.name,
+                createdAt = java.time.LocalDateTime.now().toString()
+            )
+            FoldersRepository.addFolder(folder)
+            call.respond(HttpStatusCode.Created, folder)
+        }
+
+        put("/folders/{id}") {
+            val id = call.parameters["id"] ?: ""
+            val request = call.receive<CreateFolderRequest>()
+            val existingFolder = FoldersRepository.getFolderById(id)
+
+            if (existingFolder != null) {
+                val updatedFolder = Folder(
+                    id = id,
+                    name = request.name,
+                    createdAt = existingFolder.createdAt
+                )
+                FoldersRepository.updateFolder(id, updatedFolder)
+                call.respond(HttpStatusCode.OK, updatedFolder)
+            } else {
+                call.respond(HttpStatusCode.NotFound, "Folder not found")
+            }
+        }
+
+        delete("/folders/{id}") {
+            val id = call.parameters["id"] ?: ""
+            val success = FoldersRepository.deleteFolder(id)
+            if (success) {
+                call.respond(HttpStatusCode.OK, "Folder deleted")
+            } else {
+                call.respond(HttpStatusCode.NotFound, "Folder not found")
+            }
+        }
+
+        // ===== Note Endpoints =====
+
         get("/notes") {
             call.respond(NotesRepository.getAllNotes())
         }
 
-        // Get a specific note by ID
         get("/notes/{id}") {
             val id = call.parameters["id"]
             val note = NotesRepository.getNoteById(id ?: "")
@@ -45,20 +100,24 @@ fun Application.configureRouting() {
             }
         }
 
-        // Create a new note
+        get("/folders/{folderId}/notes") {
+            val folderId = call.parameters["folderId"] ?: ""
+            call.respond(NotesRepository.getNotesByFolder(folderId))
+        }
+
         post("/notes") {
             val request = call.receive<CreateNoteRequest>()
             val note = GroceryNote(
                 id = java.util.UUID.randomUUID().toString(),
                 title = request.title,
                 items = request.items,
+                folderId = request.folderId,
                 createdAt = java.time.LocalDateTime.now().toString()
             )
             NotesRepository.addNote(note)
             call.respond(HttpStatusCode.Created, note)
         }
 
-// Update a note
         put("/notes/{id}") {
             val id = call.parameters["id"] ?: ""
             val request = call.receive<CreateNoteRequest>()
@@ -69,6 +128,7 @@ fun Application.configureRouting() {
                     id = id,
                     title = request.title,
                     items = request.items,
+                    folderId = request.folderId,
                     createdAt = existingNote.createdAt
                 )
                 NotesRepository.updateNote(id, updatedNote)
@@ -78,7 +138,6 @@ fun Application.configureRouting() {
             }
         }
 
-        // Delete a note
         delete("/notes/{id}") {
             val id = call.parameters["id"] ?: ""
             val success = NotesRepository.deleteNote(id)
@@ -86,35 +145,6 @@ fun Application.configureRouting() {
                 call.respond(HttpStatusCode.OK, "Note deleted")
             } else {
                 call.respond(HttpStatusCode.NotFound, "Note not found")
-            }
-        }
-
-        // ===== Preferred Items Endpoints =====
-
-        // Get all preferred items
-        get("/preferred-items") {
-            call.respond(PreferredItemsRepository.getAllItems())
-        }
-
-        // Add a preferred item
-        post("/preferred-items") {
-            val item = call.receive<PreferredItem>()
-            val success = PreferredItemsRepository.addItem(item)
-            if (success) {
-                call.respond(HttpStatusCode.Created, item)
-            } else {
-                call.respond(HttpStatusCode.BadRequest, "Maximum 10 preferred items allowed")
-            }
-        }
-
-        // Delete a preferred item
-        delete("/preferred-items/{id}") {
-            val id = call.parameters["id"] ?: ""
-            val success = PreferredItemsRepository.removeItem(id)
-            if (success) {
-                call.respond(HttpStatusCode.OK, "Preferred item deleted")
-            } else {
-                call.respond(HttpStatusCode.NotFound, "Preferred item not found")
             }
         }
     }
