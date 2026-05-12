@@ -107,27 +107,26 @@ fun Application.configureRouting() {
 
         post("/notes") {
             val request = call.receive<CreateNoteRequest>()
-            val note = GroceryNote(
+            val note = Note(  // Changed from GroceryNote
                 id = java.util.UUID.randomUUID().toString(),
                 title = request.title,
-                items = request.items,
+                content = request.content,  // Changed from items
                 folderId = request.folderId,
                 createdAt = java.time.LocalDateTime.now().toString()
             )
             NotesRepository.addNote(note)
             call.respond(HttpStatusCode.Created, note)
         }
-
         put("/notes/{id}") {
             val id = call.parameters["id"] ?: ""
             val request = call.receive<CreateNoteRequest>()
             val existingNote = NotesRepository.getNoteById(id)
 
             if (existingNote != null) {
-                val updatedNote = GroceryNote(
+                val updatedNote = Note(  // Changed from GroceryNote
                     id = id,
                     title = request.title,
-                    items = request.items,
+                    content = request.content,  // Changed from items
                     folderId = request.folderId,
                     createdAt = existingNote.createdAt
                 )

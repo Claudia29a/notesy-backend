@@ -15,10 +15,10 @@ data class CreateFolderRequest(
 )
 
 @Serializable
-data class GroceryNote(
+data class Note(  // Changed from GroceryNote
     val id: String,
     val title: String,
-    val items: List<String>,
+    val content: String,  // Changed from items: List<String>
     val folderId: String?,
     val createdAt: String
 )
@@ -26,6 +26,6 @@ data class GroceryNote(
 @Serializable
 data class CreateNoteRequest(
     val title: String,
-    val items: List<String>,
+    val content: String,  // Changed from items: List<String>
     val folderId: String? = null
 )
