@@ -1,14 +1,22 @@
 package com.example.notesy
 
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.ktor.http.*
-import io.ktor.server.request.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.call
+import io.ktor.server.application.install
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
+import io.ktor.server.routing.routing
 
 fun main() {
     embeddedServer(Netty, port = 8080, module = Application::module)
@@ -36,8 +44,9 @@ fun Application.configureRouting() {
         }
 
         get("/folders/{id}") {
-            val id = call.parameters["id"]
-            val folder = FoldersRepository.getFolderById(id ?: "")
+            val id = call.parameters["id"] ?: ""
+            val folder = FoldersRepository.getFolderById(id)
+
             if (folder != null) {
                 call.respond(folder)
             } else {
@@ -47,11 +56,13 @@ fun Application.configureRouting() {
 
         post("/folders") {
             val request = call.receive<CreateFolderRequest>()
+
             val folder = Folder(
                 id = java.util.UUID.randomUUID().toString(),
                 name = request.name,
                 createdAt = java.time.LocalDateTime.now().toString()
             )
+
             FoldersRepository.addFolder(folder)
             call.respond(HttpStatusCode.Created, folder)
         }
@@ -67,6 +78,7 @@ fun Application.configureRouting() {
                     name = request.name,
                     createdAt = existingFolder.createdAt
                 )
+
                 FoldersRepository.updateFolder(id, updatedFolder)
                 call.respond(HttpStatusCode.OK, updatedFolder)
             } else {
@@ -77,6 +89,7 @@ fun Application.configureRouting() {
         delete("/folders/{id}") {
             val id = call.parameters["id"] ?: ""
             val success = FoldersRepository.deleteFolder(id)
+
             if (success) {
                 call.respond(HttpStatusCode.OK, "Folder deleted")
             } else {
@@ -91,8 +104,9 @@ fun Application.configureRouting() {
         }
 
         get("/notes/{id}") {
-            val id = call.parameters["id"]
-            val note = NotesRepository.getNoteById(id ?: "")
+            val id = call.parameters["id"] ?: ""
+            val note = NotesRepository.getNoteById(id)
+
             if (note != null) {
                 call.respond(note)
             } else {
@@ -107,29 +121,33 @@ fun Application.configureRouting() {
 
         post("/notes") {
             val request = call.receive<CreateNoteRequest>()
-            val note = Note(  // Changed from GroceryNote
+
+            val note = Note(
                 id = java.util.UUID.randomUUID().toString(),
                 title = request.title,
-                content = request.content,  // Changed from items
+                content = request.content,
                 folderId = request.folderId,
                 createdAt = java.time.LocalDateTime.now().toString()
             )
+
             NotesRepository.addNote(note)
             call.respond(HttpStatusCode.Created, note)
         }
+
         put("/notes/{id}") {
             val id = call.parameters["id"] ?: ""
             val request = call.receive<CreateNoteRequest>()
             val existingNote = NotesRepository.getNoteById(id)
 
             if (existingNote != null) {
-                val updatedNote = Note(  // Changed from GroceryNote
+                val updatedNote = Note(
                     id = id,
                     title = request.title,
-                    content = request.content,  // Changed from items
+                    content = request.content,
                     folderId = request.folderId,
                     createdAt = existingNote.createdAt
                 )
+
                 NotesRepository.updateNote(id, updatedNote)
                 call.respond(HttpStatusCode.OK, updatedNote)
             } else {
@@ -140,10 +158,44 @@ fun Application.configureRouting() {
         delete("/notes/{id}") {
             val id = call.parameters["id"] ?: ""
             val success = NotesRepository.deleteNote(id)
+
             if (success) {
                 call.respond(HttpStatusCode.OK, "Note deleted")
             } else {
                 call.respond(HttpStatusCode.NotFound, "Note not found")
+            }
+        }
+
+        // ===== AI Endpoint =====
+
+        post("/ai/suggest-groceries") {
+            try {
+                val request = call.receive<AiSuggestRequest>()
+
+                if (request.noteText.isBlank()) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        AiErrorResponse(error = "noteText cannot be blank")
+                    )
+                    return@post
+                }
+
+                val items = suggestGroceriesWithOllama(request.noteText)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    AiSuggestResponse(items = items)
+                )
+            } catch (e: IllegalStateException) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    AiErrorResponse(error = e.message ?: "AI configuration error")
+                )
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    AiErrorResponse(error = e.message ?: "Unknown AI error")
+                )
             }
         }
     }
