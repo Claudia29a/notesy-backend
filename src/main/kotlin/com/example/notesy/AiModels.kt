@@ -25,6 +25,7 @@ data class OllamaGenerateRequest(
 )
 
 @Serializable
-data class OllamaGenerateResponse(
-    val response: String
+data class OllamaGenerateChunk(
+    val response: String? = null,
+    val done: Boolean? = null
 )

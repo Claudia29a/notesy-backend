@@ -1,7 +1,6 @@
 package com.example.notesy
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
@@ -10,6 +9,7 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
@@ -38,7 +38,7 @@ private val httpClient = HttpClient(CIO) {
 
 suspend fun suggestGroceriesWithOllama(noteText: String): List<String> {
     val ollamaBaseUrl = System.getenv("OLLAMA_BASE_URL") ?: "https://ollama.com/api"
-    val ollamaModel = System.getenv("OLLAMA_MODEL") ?: "gpt-oss:20b"
+    val ollamaModel = System.getenv("OLLAMA_MODEL") ?: "gpt-oss:20b-cloud"
     val ollamaApiKey = System.getenv("OLLAMA_API_KEY")
 
     val isCloudRequest = ollamaBaseUrl.startsWith("https://ollama.com")
@@ -68,7 +68,7 @@ suspend fun suggestGroceriesWithOllama(noteText: String): List<String> {
         $noteText
     """.trimIndent()
 
-    val response: OllamaGenerateResponse = httpClient.post("$ollamaBaseUrl/generate") {
+    val rawResponse = httpClient.post("$ollamaBaseUrl/generate") {
         contentType(ContentType.Application.Json)
 
         if (!ollamaApiKey.isNullOrBlank()) {
@@ -82,16 +82,46 @@ suspend fun suggestGroceriesWithOllama(noteText: String): List<String> {
                 stream = false
             )
         )
-    }.body()
+    }.bodyAsText()
 
-    val rawText = response.response.trim()
+    println("OLLAMA RAW RESPONSE: $rawResponse")
+
+    val responseText = extractOllamaResponseText(rawResponse).trim()
+    println("OLLAMA EXTRACTED RESPONSE: $responseText")
 
     return try {
-        ollamaJson.decodeFromString<List<String>>(rawText)
+        ollamaJson.decodeFromString<List<String>>(responseText)
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .distinct()
-    } catch (_: Exception) {
-        emptyList()
+    } catch (e: Exception) {
+        println("OLLAMA PARSE ERROR: ${e.message}")
+        throw IllegalStateException("AI response was not a valid JSON array: $responseText")
     }
+}
+
+private fun extractOllamaResponseText(rawResponse: String): String {
+    val lines = rawResponse
+        .lines()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+
+    if (lines.isEmpty()) return ""
+
+    if (lines.size == 1) {
+        val single = ollamaJson.decodeFromString<OllamaGenerateChunk>(lines.first())
+        return single.response.orEmpty()
+    }
+
+    val combined = buildString {
+        lines.forEach { line ->
+            try {
+                val chunk = ollamaJson.decodeFromString<OllamaGenerateChunk>(line)
+                append(chunk.response.orEmpty())
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    return combined
 }
