@@ -22,6 +22,6 @@ object FoldersRepository {
     }
 
     fun deleteFolder(id: String): Boolean {
-        return folders.removeIf { it.id == id }
+        return folders.removeAll { it.id == id }
     }
 }
