@@ -14,6 +14,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.head
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
@@ -46,6 +47,10 @@ fun Application.configureRouting() {
                     "time" to java.time.Instant.now().toString()
                 )
             )
+        }
+
+        head("/health") {
+            call.respond(HttpStatusCode.OK)
         }
 
         // ===== Folder Endpoints =====
