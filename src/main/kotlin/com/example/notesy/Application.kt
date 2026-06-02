@@ -37,6 +37,17 @@ fun Application.configureRouting() {
             call.respondText("Notesy Backend is running!", ContentType.Text.Plain)
         }
 
+        get("/health") {
+            call.respond(
+                HttpStatusCode.OK,
+                mapOf(
+                    "status" to "ok",
+                    "service" to "notesy-backend",
+                    "time" to java.time.Instant.now().toString()
+                )
+            )
+        }
+
         // ===== Folder Endpoints =====
 
         get("/folders") {
