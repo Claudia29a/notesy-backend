@@ -100,7 +100,7 @@ suspend fun suggestGroceriesWithOllama(noteText: String): List<String> {
     }
 }
 
-private fun extractOllamaResponseText(rawResponse: String): String {
+internal fun extractOllamaResponseText(rawResponse: String): String {
     val lines = rawResponse
         .lines()
         .map { it.trim() }
